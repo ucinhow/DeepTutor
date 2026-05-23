@@ -42,6 +42,10 @@ DEFAULT_INTEGRATIONS_SETTINGS: dict[str, Any] = {
 }
 
 IGNORE_PROCESS_OVERRIDES_ENV = "DEEPTUTOR_IGNORE_PROCESS_ENV_OVERRIDES"
+PROCESS_OVERRIDES_WHEN_IGNORED = {
+    "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB",
+    "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB",
+}
 TRUTHY = {"1", "true", "yes", "on"}
 FALSY = {"0", "false", "no", "off"}
 
@@ -247,7 +251,7 @@ class RuntimeSettingsService:
         return env
 
     def _process_env_value(self, key: str) -> str:
-        if self._ignore_process_overrides():
+        if self._ignore_process_overrides() and key not in PROCESS_OVERRIDES_WHEN_IGNORED:
             return ""
         value = self.process_env.get(key, "")
         if not value:

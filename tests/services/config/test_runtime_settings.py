@@ -217,3 +217,30 @@ def test_runtime_settings_can_ignore_process_overrides(tmp_path: Path) -> None:
 
     assert service.load_system()["backend_port"] == 8001
     assert service.load_auth()["enabled"] is False
+
+
+def test_runtime_settings_allows_docker_upload_limits_when_ignoring_other_env(
+    tmp_path: Path,
+) -> None:
+    service = RuntimeSettingsService(
+        tmp_path / "settings",
+        process_env={
+            "DEEPTUTOR_IGNORE_PROCESS_ENV_OVERRIDES": "1",
+            "BACKEND_PORT": "9901",
+            "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": "200",
+            "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": "150",
+        },
+    )
+    service.save_system(
+        {
+            "backend_port": 8001,
+            "knowledge_upload_max_file_size_mb": 100,
+            "knowledge_upload_max_pdf_size_mb": 50,
+        }
+    )
+
+    settings = service.load_system()
+
+    assert settings["backend_port"] == 8001
+    assert settings["knowledge_upload_max_file_size_mb"] == 200
+    assert settings["knowledge_upload_max_pdf_size_mb"] == 150

@@ -24,7 +24,14 @@ def test_render_docker_env_reads_json_only(tmp_path: Path) -> None:
     settings_dir = tmp_path / "settings"
     settings_dir.mkdir()
     (settings_dir / "system.json").write_text(
-        json.dumps({"backend_port": 9001, "frontend_port": 4000}),
+        json.dumps(
+            {
+                "backend_port": 9001,
+                "frontend_port": 4000,
+                "knowledge_upload_max_file_size_mb": 200,
+                "knowledge_upload_max_pdf_size_mb": 150,
+            }
+        ),
         encoding="utf-8",
     )
     (settings_dir / "integrations.json").write_text(
@@ -39,10 +46,14 @@ def test_render_docker_env_reads_json_only(tmp_path: Path) -> None:
         "DEEPTUTOR_DOCKER_BACKEND_PORT": "9001",
         "DEEPTUTOR_DOCKER_FRONTEND_PORT": "4000",
         "DEEPTUTOR_DOCKER_POCKETBASE_PORT": "19090",
+        "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": "200",
+        "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": "150",
     }
     saved = output_path.read_text(encoding="utf-8")
     assert "\nBACKEND_PORT=" not in saved
     assert "DEEPTUTOR_DOCKER_BACKEND_PORT=9001" in saved
+    assert "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB=200" in saved
+    assert "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB=150" in saved
 
 
 def test_render_docker_env_uses_defaults_for_missing_or_invalid_json(tmp_path: Path) -> None:
@@ -60,6 +71,8 @@ def test_render_docker_env_uses_defaults_for_missing_or_invalid_json(tmp_path: P
     assert values["DEEPTUTOR_DOCKER_BACKEND_PORT"] == "8001"
     assert values["DEEPTUTOR_DOCKER_FRONTEND_PORT"] == "3782"
     assert values["DEEPTUTOR_DOCKER_POCKETBASE_PORT"] == "8090"
+    assert values["KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB"] == "100"
+    assert values["KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB"] == "50"
 
 
 def test_compose_files_do_not_consume_legacy_env_names() -> None:
@@ -71,6 +84,8 @@ def test_compose_files_do_not_consume_legacy_env_names() -> None:
         assert "\n      - BACKEND_PORT" not in content
         assert "\n      - AUTH_ENABLED" not in content
         assert "DEEPTUTOR_DOCKER_BACKEND_PORT" in content
+        assert "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB" in content
+        assert "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB" in content
 
 
 def test_dockerfile_uses_runtime_auth_placeholder() -> None:
