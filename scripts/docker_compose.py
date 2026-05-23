@@ -24,6 +24,8 @@ DOCKER_ENV_PATH = SETTINGS_DIR / "docker.env"
 DEFAULT_BACKEND_PORT = 8001
 DEFAULT_FRONTEND_PORT = 3782
 DEFAULT_POCKETBASE_PORT = 8090
+DEFAULT_KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB = 100
+DEFAULT_KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB = 50
 
 
 def _read_json_object(path: Path) -> dict[str, Any]:
@@ -42,6 +44,14 @@ def _coerce_port(value: Any, default: int) -> int:
     return port if 1 <= port <= 65535 else default
 
 
+def _coerce_positive_int(value: Any, default: int) -> int:
+    try:
+        number = int(str(value).strip())
+    except (TypeError, ValueError):
+        return default
+    return max(1, number)
+
+
 def render_docker_env(
     settings_dir: Path = SETTINGS_DIR,
     output_path: Path = DOCKER_ENV_PATH,
@@ -58,6 +68,24 @@ def render_docker_env(
         ),
         "DEEPTUTOR_DOCKER_POCKETBASE_PORT": str(
             _coerce_port(integrations.get("pocketbase_port"), DEFAULT_POCKETBASE_PORT)
+        ),
+        "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": str(
+            _coerce_positive_int(
+                system.get("knowledge_upload_max_file_size_mb"),
+                DEFAULT_KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB,
+            )
+        ),
+        "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": str(
+            min(
+                _coerce_positive_int(
+                    system.get("knowledge_upload_max_pdf_size_mb"),
+                    DEFAULT_KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB,
+                ),
+                _coerce_positive_int(
+                    system.get("knowledge_upload_max_file_size_mb"),
+                    DEFAULT_KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB,
+                ),
+            )
         ),
     }
     output_path.parent.mkdir(parents=True, exist_ok=True)
