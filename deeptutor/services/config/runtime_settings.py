@@ -221,12 +221,6 @@ class RuntimeSettingsService:
             "CORS_ORIGINS": ",".join(system["cors_origins"]),
             "DISABLE_SSL_VERIFY": _bool_env(system["disable_ssl_verify"]),
             "CHAT_ATTACHMENT_DIR": system["chat_attachment_dir"],
-            "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": str(
-                system["knowledge_upload_max_file_size_mb"]
-            ),
-            "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": str(
-                system["knowledge_upload_max_pdf_size_mb"]
-            ),
             "AUTH_ENABLED": _bool_env(auth["enabled"]),
             "AUTH_USERNAME": auth["username"],
             "AUTH_PASSWORD_HASH": auth["password_hash"],

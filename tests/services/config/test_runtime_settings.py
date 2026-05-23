@@ -118,8 +118,6 @@ def test_render_environment_uses_json_backed_runtime_names(monkeypatch, tmp_path
     assert env["FRONTEND_PORT"] == "3790"
     assert env["CORS_ORIGINS"] == "https://app.example"
     assert env["DISABLE_SSL_VERIFY"] == "true"
-    assert env["KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB"] == "200"
-    assert env["KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB"] == "150"
     assert env["AUTH_ENABLED"] == "true"
     assert env["NEXT_PUBLIC_AUTH_ENABLED"] == "true"
     assert env["AUTH_TOKEN_EXPIRE_HOURS"] == "12"
