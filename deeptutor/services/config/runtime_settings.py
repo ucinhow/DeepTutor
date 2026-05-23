@@ -19,6 +19,8 @@ DEFAULT_SYSTEM_SETTINGS: dict[str, Any] = {
     "cors_origins": [],
     "disable_ssl_verify": False,
     "chat_attachment_dir": "",
+    "knowledge_upload_max_file_size_mb": 100,
+    "knowledge_upload_max_pdf_size_mb": 50,
 }
 
 DEFAULT_AUTH_SETTINGS: dict[str, Any] = {
@@ -219,6 +221,12 @@ class RuntimeSettingsService:
             "CORS_ORIGINS": ",".join(system["cors_origins"]),
             "DISABLE_SSL_VERIFY": _bool_env(system["disable_ssl_verify"]),
             "CHAT_ATTACHMENT_DIR": system["chat_attachment_dir"],
+            "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": str(
+                system["knowledge_upload_max_file_size_mb"]
+            ),
+            "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": str(
+                system["knowledge_upload_max_pdf_size_mb"]
+            ),
             "AUTH_ENABLED": _bool_env(auth["enabled"]),
             "AUTH_USERNAME": auth["username"],
             "AUTH_PASSWORD_HASH": auth["password_hash"],
@@ -296,6 +304,10 @@ class RuntimeSettingsService:
             payload["disable_ssl_verify"] = value
         if value := self._process_env_value("CHAT_ATTACHMENT_DIR"):
             payload["chat_attachment_dir"] = value
+        if value := self._process_env_value("KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB"):
+            payload["knowledge_upload_max_file_size_mb"] = value
+        if value := self._process_env_value("KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB"):
+            payload["knowledge_upload_max_pdf_size_mb"] = value
         return self._normalize_system(payload)
 
     def _apply_auth_process_overrides(self, settings: dict[str, Any]) -> dict[str, Any]:
@@ -330,6 +342,13 @@ class RuntimeSettingsService:
         return self._normalize_integrations(payload)
 
     def _normalize_system(self, settings: dict[str, Any]) -> dict[str, Any]:
+        max_file_size_mb = max(
+            1, _coerce_int(settings.get("knowledge_upload_max_file_size_mb"), 100)
+        )
+        max_pdf_size_mb = max(
+            1, _coerce_int(settings.get("knowledge_upload_max_pdf_size_mb"), 50)
+        )
+        max_pdf_size_mb = min(max_pdf_size_mb, max_file_size_mb)
         return {
             "version": 1,
             "backend_port": _coerce_port(settings.get("backend_port"), 8001),
@@ -340,6 +359,8 @@ class RuntimeSettingsService:
             "cors_origins": _coerce_origins(settings.get("cors_origins")),
             "disable_ssl_verify": _coerce_bool(settings.get("disable_ssl_verify"), False),
             "chat_attachment_dir": _string(settings.get("chat_attachment_dir")),
+            "knowledge_upload_max_file_size_mb": max_file_size_mb,
+            "knowledge_upload_max_pdf_size_mb": max_pdf_size_mb,
         }
 
     def _normalize_auth(self, settings: dict[str, Any]) -> dict[str, Any]:

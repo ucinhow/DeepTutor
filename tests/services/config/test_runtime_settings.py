@@ -17,6 +17,8 @@ RUNTIME_ENV_KEYS = (
     "CORS_ORIGINS",
     "DISABLE_SSL_VERIFY",
     "CHAT_ATTACHMENT_DIR",
+    "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB",
+    "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB",
     "AUTH_ENABLED",
     "NEXT_PUBLIC_AUTH_ENABLED",
     "AUTH_USERNAME",
@@ -49,6 +51,14 @@ def test_runtime_settings_creates_defaults_without_reading_dotenv(tmp_path: Path
     service = RuntimeSettingsService(tmp_path / "settings")
 
     assert service.load_system(include_process_overrides=False)["backend_port"] == 8001
+    assert (
+        service.load_system(include_process_overrides=False)["knowledge_upload_max_file_size_mb"]
+        == 100
+    )
+    assert (
+        service.load_system(include_process_overrides=False)["knowledge_upload_max_pdf_size_mb"]
+        == 50
+    )
     assert service.load_auth(include_process_overrides=False)["enabled"] is False
     assert service.load_integrations(include_process_overrides=False)["pocketbase_url"] == ""
 
@@ -61,6 +71,8 @@ def test_runtime_process_env_is_explicit_override(tmp_path: Path) -> None:
         tmp_path / "settings",
         process_env={
             "BACKEND_PORT": "9100",
+            "KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB": "256",
+            "KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB": "128",
             "AUTH_ENABLED": "true",
             "POCKETBASE_PORT": "9090",
         },
@@ -70,6 +82,8 @@ def test_runtime_process_env_is_explicit_override(tmp_path: Path) -> None:
     service.save_integrations({"pocketbase_port": 8090})
 
     assert service.load_system()["backend_port"] == 9100
+    assert service.load_system()["knowledge_upload_max_file_size_mb"] == 256
+    assert service.load_system()["knowledge_upload_max_pdf_size_mb"] == 128
     assert service.load_auth()["enabled"] is True
     assert service.load_integrations()["pocketbase_port"] == 9090
     assert _read_json(service.path_for("system"))["backend_port"] == 8001
@@ -86,6 +100,8 @@ def test_render_environment_uses_json_backed_runtime_names(monkeypatch, tmp_path
             "frontend_port": 3790,
             "cors_origins": ["https://app.example"],
             "disable_ssl_verify": True,
+            "knowledge_upload_max_file_size_mb": 200,
+            "knowledge_upload_max_pdf_size_mb": 150,
         }
     )
     service.save_auth({"enabled": True, "username": "admin", "token_expire_hours": 12})
@@ -102,6 +118,8 @@ def test_render_environment_uses_json_backed_runtime_names(monkeypatch, tmp_path
     assert env["FRONTEND_PORT"] == "3790"
     assert env["CORS_ORIGINS"] == "https://app.example"
     assert env["DISABLE_SSL_VERIFY"] == "true"
+    assert env["KNOWLEDGE_UPLOAD_MAX_FILE_SIZE_MB"] == "200"
+    assert env["KNOWLEDGE_UPLOAD_MAX_PDF_SIZE_MB"] == "150"
     assert env["AUTH_ENABLED"] == "true"
     assert env["NEXT_PUBLIC_AUTH_ENABLED"] == "true"
     assert env["AUTH_TOKEN_EXPIRE_HOURS"] == "12"
@@ -125,6 +143,19 @@ def test_exported_environment_does_not_become_runtime_override(monkeypatch, tmp_
 
     assert service.load_system()["backend_port"] == 8020
     assert service.load_auth()["enabled"] is True
+
+
+def test_runtime_settings_clamps_pdf_limit_to_file_limit(tmp_path: Path) -> None:
+    service = RuntimeSettingsService(tmp_path / "settings")
+    saved = service.save_system(
+        {
+            "knowledge_upload_max_file_size_mb": 80,
+            "knowledge_upload_max_pdf_size_mb": 120,
+        }
+    )
+
+    assert saved["knowledge_upload_max_file_size_mb"] == 80
+    assert saved["knowledge_upload_max_pdf_size_mb"] == 80
 
 
 def test_existing_process_environment_remains_deployment_override(

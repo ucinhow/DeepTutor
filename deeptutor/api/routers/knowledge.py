@@ -211,7 +211,7 @@ def _save_uploaded_files(
                 file.filename = sanitized_filename
 
                 file_path = target_dir / sanitized_filename
-                max_size = DocumentValidator.MAX_FILE_SIZE
+                max_size = DocumentValidator.get_max_file_size()
                 written_bytes = 0
 
                 file.file.seek(0)
@@ -661,8 +661,8 @@ async def get_supported_file_types():
     return SupportedFileTypesInfo(
         extensions=extensions,
         accept=",".join(dict.fromkeys(accept_items)),
-        max_file_size_bytes=DocumentValidator.MAX_FILE_SIZE,
-        max_pdf_size_bytes=DocumentValidator.MAX_PDF_SIZE,
+        max_file_size_bytes=DocumentValidator.get_max_file_size(),
+        max_pdf_size_bytes=DocumentValidator.get_max_pdf_size(),
     )
 
 

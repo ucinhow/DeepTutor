@@ -9,15 +9,20 @@ import re
 from typing import ClassVar
 import unicodedata
 
+from deeptutor.services.config.runtime_settings import load_system_settings
+
 
 class DocumentValidator:
     """Document validation utilities"""
 
+    DEFAULT_MAX_FILE_SIZE_MB: ClassVar[int] = 100
+    DEFAULT_MAX_PDF_SIZE_MB: ClassVar[int] = 50
+
     # Maximum file size in bytes (100MB)
-    MAX_FILE_SIZE: ClassVar[int] = 100 * 1024 * 1024
+    MAX_FILE_SIZE: ClassVar[int] = DEFAULT_MAX_FILE_SIZE_MB * 1024 * 1024
 
     # Maximum file size for PDF processing (50MB to prevent resource exhaustion)
-    MAX_PDF_SIZE: ClassVar[int] = 50 * 1024 * 1024
+    MAX_PDF_SIZE: ClassVar[int] = DEFAULT_MAX_PDF_SIZE_MB * 1024 * 1024
 
     # Allowed file extensions
     ALLOWED_EXTENSIONS: ClassVar[set[str]] = {
@@ -58,6 +63,44 @@ class DocumentValidator:
     }
 
     @staticmethod
+    def _coerce_size_mb(value: object, default: int) -> int:
+        try:
+            size_mb = int(str(value).strip())
+        except (TypeError, ValueError):
+            size_mb = default
+        return max(1, size_mb)
+
+    @classmethod
+    def get_max_file_size(cls) -> int:
+        """Return the configured generic upload limit in bytes."""
+        try:
+            settings = load_system_settings()
+        except Exception:
+            settings = {}
+        size_mb = cls._coerce_size_mb(
+            settings.get("knowledge_upload_max_file_size_mb"),
+            cls.DEFAULT_MAX_FILE_SIZE_MB,
+        )
+        return size_mb * 1024 * 1024
+
+    @classmethod
+    def get_max_pdf_size(cls) -> int:
+        """Return the effective configured PDF upload limit in bytes."""
+        try:
+            settings = load_system_settings()
+        except Exception:
+            settings = {}
+        file_size_mb = cls._coerce_size_mb(
+            settings.get("knowledge_upload_max_file_size_mb"),
+            cls.DEFAULT_MAX_FILE_SIZE_MB,
+        )
+        pdf_size_mb = cls._coerce_size_mb(
+            settings.get("knowledge_upload_max_pdf_size_mb"),
+            cls.DEFAULT_MAX_PDF_SIZE_MB,
+        )
+        return min(pdf_size_mb, file_size_mb) * 1024 * 1024
+
+    @staticmethod
     def validate_upload_safety(
         filename: str, file_size: int | None, allowed_extensions: set[str] | None = None
     ) -> str:
@@ -76,9 +119,10 @@ class DocumentValidator:
             ValueError: If validation fails
         """
         # Check file size (skip if size is None)
-        if file_size is not None and file_size > DocumentValidator.MAX_FILE_SIZE:
+        max_file_size = DocumentValidator.get_max_file_size()
+        if file_size is not None and file_size > max_file_size:
             raise ValueError(
-                f"File too large: {file_size} bytes. Maximum allowed: {DocumentValidator.MAX_FILE_SIZE} bytes"
+                f"File too large: {file_size} bytes. Maximum allowed: {max_file_size} bytes"
             )
 
         # Sanitize filename - remove path components and dangerous characters
@@ -97,9 +141,10 @@ class DocumentValidator:
             raise ValueError("Invalid filename")
 
         # Additional size check for PDFs to prevent resource exhaustion
-        if ext == ".pdf" and file_size is not None and file_size > DocumentValidator.MAX_PDF_SIZE:
+        max_pdf_size = DocumentValidator.get_max_pdf_size()
+        if ext == ".pdf" and file_size is not None and file_size > max_pdf_size:
             raise ValueError(
-                f"PDF file too large: {file_size} bytes. Maximum allowed for PDFs: {DocumentValidator.MAX_PDF_SIZE} bytes"
+                f"PDF file too large: {file_size} bytes. Maximum allowed for PDFs: {max_pdf_size} bytes"
             )
 
         # Check file extension

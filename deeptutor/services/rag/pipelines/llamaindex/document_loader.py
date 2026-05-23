@@ -63,9 +63,9 @@ class LlamaIndexDocumentLoader:
 
     def _extract_parser_text(self, file_path: Path) -> str:
         max_bytes = (
-            DocumentValidator.MAX_PDF_SIZE
+            DocumentValidator.get_max_pdf_size()
             if file_path.suffix.lower() == ".pdf"
-            else DocumentValidator.MAX_FILE_SIZE
+            else DocumentValidator.get_max_file_size()
         )
         try:
             return extract_text_from_path(file_path, max_bytes=max_bytes, max_chars=None)
@@ -179,10 +179,11 @@ class LlamaIndexDocumentLoader:
 
     def _load_image_payload(self, file_path: Path) -> dict[str, str]:
         size = file_path.stat().st_size
-        if size > DocumentValidator.MAX_FILE_SIZE:
+        max_file_size = DocumentValidator.get_max_file_size()
+        if size > max_file_size:
             raise OSError(
                 f"image file too large: {size} bytes; "
-                f"maximum allowed: {DocumentValidator.MAX_FILE_SIZE} bytes"
+                f"maximum allowed: {max_file_size} bytes"
             )
         mimetype = mimetypes.guess_type(file_path.name)[0] or "application/octet-stream"
         encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
